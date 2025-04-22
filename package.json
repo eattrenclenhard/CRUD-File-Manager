@@ -11,7 +11,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "backend": "cd backend && .venv\\Scripts\\activate.bat && python main.py",
+    "start:all": "concurrently \"npm run dev\" \"npm run backend\""
   },
   "homepage": "https://github.com/n1crack/vuefinder#readme",
   "keywords": [
@@ -34,6 +36,7 @@
     "@types/node": "^18.7.1",
     "@vitejs/plugin-vue": "^4.0.0",
     "autoprefixer": "^10.4.8",
+    "concurrently": "^9.1.2",
     "postcss": "^8.4.16",
     "rollup-plugin-copy": "^3.5.0",
     "sass": "^1.75.0",
