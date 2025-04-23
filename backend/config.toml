@@ -1,0 +1,10 @@
+# Add pinned folders in the order you want them to be loaded
+[[file_systems]]
+name = "media"
+read_only = true
+path = "tests/media"
+
+[[file_systems]]
+name = "media_rw"
+read_only = false
+path = "tests/media"
