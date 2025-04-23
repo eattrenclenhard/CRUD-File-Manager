@@ -13,6 +13,9 @@ from shutil import copyfileobj
 from collections import OrderedDict
 from pathvalidate import is_valid_filename
 import io
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def fill_fs(fs: FS, d: dict):
@@ -167,7 +170,8 @@ class VuefinderApp(object):
         return Response(
             fs.open(path, "rb"),
             direct_passthrough=True,
-            mimetype=mimetypes.guess_type(info.name)[0] or "application/octet-stream",
+            mimetype=mimetypes.guess_type(
+                info.name)[0] or "application/octet-stream",
             headers=headers,
         )
 
@@ -205,7 +209,8 @@ class VuefinderApp(object):
         fs, path = self.delegate(request)
         payload = request.get_json()
         self.__move(
-            fs, payload.get("item", ""), fspath.join(path, payload.get("name", ""))
+            fs, payload.get("item", ""), fspath.join(
+                path, payload.get("name", ""))
         )
         return self._index(request)
 
@@ -253,7 +258,8 @@ class VuefinderApp(object):
             dst_path = fspath.relativefrom(base, path)
             if fs.isdir(path):
                 zip.makedir(dst_path)
-                paths = [fspath.join(path, name) for name in fs.listdir(path)] + paths
+                paths = [fspath.join(path, name)
+                         for name in fs.listdir(path)] + paths
             else:
                 with fs.openbin(path) as f:
                     zip.writefile(dst_path, f)
@@ -274,7 +280,8 @@ class VuefinderApp(object):
 
         fs, path = self.delegate(request)
         items: list[dict] = payload.get("items", [])
-        paths = [self._fs_path(item["path"]) for item in items if "path" in item]
+        paths = [self._fs_path(item["path"])
+                 for item in items if "path" in item]
         archive_path = fspath.join(path, name)
 
         if fs.exists(archive_path):
@@ -335,6 +342,88 @@ class VuefinderApp(object):
 
         return self._preview(request)
 
+    def save_content(self, fs_name: str, path: str, content: str) -> dict:
+        """Save content to a file programmatically."""
+        try:
+            # Get the file system adapter
+            fs = self._adapters.get(fs_name)
+            if not fs:
+                raise ValueError(f"File system '{fs_name}' not found")
+
+            # Write content to the file
+            with fs.open(path, "w") as f:
+                f.write(content)
+
+            # Return success response
+            return {"message": "Content saved successfully", "path": path}
+        except Exception as e:
+            # Log and return error response
+            logger.error(f"Error saving content: {e}")
+            return {"error": f"Failed to save content: {str(e)}"}
+
+    def create_new_file(self, fs_name: str, path: str, name: str) -> dict:
+        """Create a new file programmatically."""
+        try:
+            # Get the file system adapter
+            fs = self._adapters.get(fs_name)
+            if not fs:
+                raise ValueError(f"File system '{fs_name}' not found")
+
+            # Construct the full path for the new file
+            full_path = fspath.join(path, name)
+
+            # Write an empty file
+            fs.writetext(full_path, "")
+
+            # Return success response
+            return {"message": "File created successfully", "path": full_path}
+        except Exception as e:
+            # Log and return error response
+            logger.error(f"Error creating file: {e}")
+            return {"error": f"Failed to create file: {str(e)}"}
+
+    def create_new_folder(self, fs_name: str, path: str, name: str) -> dict:
+        """Create a new folder programmatically."""
+        try:
+            # Get the file system adapter
+            fs = self._adapters.get(fs_name)
+            if not fs:
+                raise ValueError(f"File system '{fs_name}' not found")
+
+            # Construct the full path for the new folder
+            full_path = fspath.join(path, name)
+
+            # Create the folder
+            fs.makedir(full_path)
+
+            # Return success response
+            return {"message": "Folder created successfully", "path": full_path}
+        except Exception as e:
+            # Log and return error response
+            logger.error(f"Error creating folder: {e}")
+            return {"error": f"Failed to create folder: {str(e)}"}
+
+    def delete_item(self, fs_name: str, path: str) -> dict:
+        """Delete a file or folder programmatically."""
+        try:
+            # Get the file system adapter
+            fs = self._adapters.get(fs_name)
+            if not fs:
+                raise ValueError(f"File system '{fs_name}' not found")
+
+            # Check if the path is a directory or file and delete accordingly
+            if fs.isdir(path):
+                fs.removetree(path)
+            else:
+                fs.remove(path)
+
+            # Return success response
+            return {"message": "Deleted successfully", "path": path}
+        except Exception as e:
+            # Log and return error response
+            logger.error(f"Error deleting item: {e}")
+            return {"error": f"Failed to delete item: {str(e)}"}
+
     def dispatch_request(self, request: Request):
         headers = {}
         if self.enable_cors:
@@ -355,9 +444,11 @@ class VuefinderApp(object):
         try:
             response = self.endpoints[endpoint](request)
         except errors.ResourceReadOnly as exc:
-            response = json_response({"message": str(exc), "status": False}, 400)
+            response = json_response(
+                {"message": str(exc), "status": False}, 400)
         except BadRequest as exc:
-            response = json_response({"message": exc.description, "status": False}, 400)
+            response = json_response(
+                {"message": exc.description, "status": False}, 400)
 
         response.headers.extend(headers)
         return response
