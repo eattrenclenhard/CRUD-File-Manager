@@ -1,15 +1,16 @@
 <template>
   <div class="login-container">
     <div class="login-box">
-      <h2>Access Required</h2>
+      <h2>Frankenstein File Manager</h2>
       <form @submit.prevent="handleLogin">
         <div class="form-group">
-          <label for="accessCode">Access Code</label>
+          <!-- <label for="accessCode">Access Code</label> -->
           <input
             type="password"
             id="accessCode"
             v-model="accessCode"
             required
+            title="fill in access code"
             placeholder="Enter access code"
           />
         </div>
@@ -66,16 +67,33 @@ export default {
 }
 
 .login-box {
+  margin: 0 auto;
   background: white;
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .form-group {
   margin-bottom: 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 label {
@@ -86,6 +104,7 @@ label {
 
 input {
   width: 100%;
+  max-width: 250px;
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -93,14 +112,18 @@ input {
 }
 
 button {
-  width: 100%;
-  padding: 0.75rem;
+  width: auto;
+  min-width: 80px;
+  padding: 0.75rem 1.25rem;
   background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 4px;
   font-size: 1rem;
   cursor: pointer;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 button:disabled {

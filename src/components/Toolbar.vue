@@ -212,11 +212,13 @@ const toggleView = () => {
 <style scoped>
 .logout-btn {
   margin-left: 16px;
+  margin-right: 8px;
+  margin-top: 4px;
   background: #e53935;
   color: #fff;
   border: none;
   border-radius: 4px;
-  padding: 6px 14px;
+  padding: 6px 10px;
   cursor: pointer;
   font-weight: bold;
 }
