@@ -14,6 +14,8 @@ from collections import OrderedDict
 from pathvalidate import is_valid_filename
 import io
 import logging
+import sqlite3
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,20 @@ def to_vuefinder_resource(storage: str, path: str, info: Info) -> dict:
         "storage": storage,
         "file_size": info.size,
     }
+
+
+def get_access_code_from_db():
+    db_path = os.path.join(os.path.dirname(__file__), '..', 'users.db')
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute('SELECT access_code FROM access LIMIT 1')
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        return None
+    finally:
+        conn.close()
 
 
 class Adapter(object):
@@ -498,10 +514,13 @@ class VuefinderApp(object):
         if request.method == "OPTIONS":
             return Response(headers=headers)
 
+        # Fetch access code from DB
+        access_code = get_access_code_from_db()
+
         # For preview requests, check token in query params
         if request.args.get("q") == "preview":
             token = request.args.get("token")
-            if token == "frankenstein":
+            if token == access_code:
                 return self._preview(request)
             response = json_response({"error": "Unauthorized"}, status=401)
             response.headers.extend(headers)
@@ -509,7 +528,7 @@ class VuefinderApp(object):
 
         # For all other requests, check Authorization header
         auth_header = request.headers.get('Authorization')
-        if not auth_header or auth_header != 'Bearer frankenstein':
+        if not auth_header or auth_header != f'Bearer {access_code}':
             response = json_response({"error": "Unauthorized"}, status=401)
             response.headers.extend(headers)
             return response
