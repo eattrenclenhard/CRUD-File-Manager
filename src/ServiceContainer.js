@@ -14,6 +14,13 @@ import useData from "./composables/useData.js";
 export default (props, options) => {
     const storage = useStorage(props.id);
     const emitter = mitt();
+
+    // Check authentication
+    const accessCode = localStorage.getItem('accessCode');
+    if (!accessCode) {
+        return null;
+    }
+
     const metricUnits = storage.getStore('metricUnits', false);
     const theme = useTheme(storage, props.theme);
     const supportedLocales = options.i18n;
@@ -55,7 +62,13 @@ export default (props, options) => {
         // dragSelect object, it is responsible for selecting items
         dragSelect: computed(() => dragSelect),
         // http object
-        requester : buildRequester(props.request),
+        requester: buildRequester({
+            ...props.request,
+            headers: {
+                ...props.request.headers,
+                'Authorization': `Bearer ${accessCode}`
+            }
+        }),
         // active features
         features: setFeatures(props.features),
         // view state

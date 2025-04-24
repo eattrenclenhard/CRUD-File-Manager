@@ -1,5 +1,6 @@
 <template>
-  <div class="wrapper">
+  <Login v-if="!isAuthenticated" @login-success="handleLoginSuccess" />
+  <div v-else class="wrapper">
     <label for="example"> Example </label>
     <div>
       <select id="example" v-model="example">
@@ -59,8 +60,15 @@
 
 <script setup>
 import { ref } from "vue";
+import Login from '../src/components/Login.vue';
 import { FEATURES, FEATURE_ALL_NAMES } from "../src/features.js";
 import { contextMenuItems, SimpleContextMenuItem } from "../src/index.js";
+
+const isAuthenticated = ref(!!localStorage.getItem('accessCode'));
+
+const handleLoginSuccess = (accessCode) => {
+  isAuthenticated.value = true;
+};
 
 const example = ref("default");
 const examples = {
@@ -74,7 +82,7 @@ const examples = {
 const request = {
   baseUrl: "http://localhost:8005",
   headers: {
-    Authorization: "Bearer frankenstein",
+    "Authorization": `Bearer ${localStorage.getItem('accessCode') || ''}`
   },
   transformRequest: (req) => {
     if (req.method === "get") {
@@ -83,7 +91,7 @@ const request = {
     // Ensure Authorization header is present in all requests
     req.headers = {
       ...req.headers,
-      Authorization: "Bearer frankenstein",
+      "Authorization": `Bearer ${localStorage.getItem('accessCode') || ''}`
     };
     return req;
   },

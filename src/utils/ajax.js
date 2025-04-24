@@ -70,7 +70,7 @@ export class Requester {
         let response = await fetch(resource, options);
 
         if (this.config.fetchResponseInterceptor) {
-            response = await this.config.fetchResponseInterceptor(response);
+            response = this.config.fetchResponseInterceptor(response);
         }
 
         return response;
@@ -235,6 +235,15 @@ export class Requester {
         }
 
         const response = await this.customFetch(url, init);
+        
+        // Handle unauthorized responses
+        if (response.status === 401) {
+            // Clear access code and reload page to show login
+            localStorage.removeItem('accessCode');
+            window.location.reload();
+            throw new Error('Unauthorized');
+        }
+        
         if (response.ok) {
             return await response[responseType]();
         }
