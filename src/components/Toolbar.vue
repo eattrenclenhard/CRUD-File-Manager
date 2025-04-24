@@ -5,7 +5,7 @@
         class="mx-1.5"
         :title="t('New Folder')"
         v-if="app.features.includes(FEATURES.NEW_FOLDER)"
-        @click="app.modal.open(ModalNewFolder, {items: ds.getSelected()})"
+        @click="app.modal.open(ModalNewFolder, { items: ds.getSelected() })"
       >
         <NewFolderSVG />
       </div>
@@ -14,7 +14,7 @@
         class="mx-1.5"
         :title="t('New File')"
         v-if="app.features.includes(FEATURES.NEW_FILE)"
-        @click="app.modal.open(ModalNewFile, {items: ds.getSelected()})"
+        @click="app.modal.open(ModalNewFile, { items: ds.getSelected() })"
       >
         <NewFileSVG />
       </div>
@@ -23,54 +23,90 @@
         class="mx-1.5"
         :title="t('Rename')"
         v-if="app.features.includes(FEATURES.RENAME)"
-        @click="(ds.getCount() !== 1) || app.modal.open(ModalRename, {items: ds.getSelected()})"
+        @click="
+          ds.getCount() !== 1 ||
+            app.modal.open(ModalRename, { items: ds.getSelected() })
+        "
       >
-        <RenameSVG :class="(ds.getCount() === 1) ? 'vf-toolbar-icon' : 'vf-toolbar-icon-disabled'" />
+        <RenameSVG
+          :class="
+            ds.getCount() === 1 ? 'vf-toolbar-icon' : 'vf-toolbar-icon-disabled'
+          "
+        />
       </div>
 
       <div
         class="mx-1.5"
         :title="t('Delete')"
         v-if="app.features.includes(FEATURES.DELETE)"
-        @click="(!ds.getCount()) || app.modal.open(ModalDelete, {items: ds.getSelected()})"
+        @click="
+          !ds.getCount() ||
+            app.modal.open(ModalDelete, { items: ds.getSelected() })
+        "
       >
-        <DeleteSVG :class="(ds.getCount()) ? 'vf-toolbar-icon' : 'vf-toolbar-icon-disabled'" />
+        <DeleteSVG
+          :class="
+            ds.getCount() ? 'vf-toolbar-icon' : 'vf-toolbar-icon-disabled'
+          "
+        />
       </div>
 
       <div
         class="mx-1.5"
         :title="t('Upload')"
         v-if="app.features.includes(FEATURES.UPLOAD)"
-        @click="app.modal.open(ModalUpload, {items: ds.getSelected()})"
+        @click="app.modal.open(ModalUpload, { items: ds.getSelected() })"
       >
         <UploadSVG />
       </div>
 
       <div
         class="mx-1.5"
-        v-if="app.features.includes(FEATURES.UNARCHIVE) && ds.getCount() === 1 && ds.getSelected()[0].mime_type === 'application/zip'"
+        v-if="
+          app.features.includes(FEATURES.UNARCHIVE) &&
+          ds.getCount() === 1 &&
+          ds.getSelected()[0].mime_type === 'application/zip'
+        "
         :title="t('Unarchive')"
-        @click="(!ds.getCount()) || app.modal.open(ModalUnarchive, {items: ds.getSelected()})"
+        @click="
+          !ds.getCount() ||
+            app.modal.open(ModalUnarchive, { items: ds.getSelected() })
+        "
       >
-        <UnarchiveSVG :class="(ds.getCount()) ? 'vf-toolbar-icon' : 'vf-toolbar-icon-disabled'" />
+        <UnarchiveSVG
+          :class="
+            ds.getCount() ? 'vf-toolbar-icon' : 'vf-toolbar-icon-disabled'
+          "
+        />
       </div>
 
       <div
         class="mx-1.5"
         v-if="app.features.includes(FEATURES.ARCHIVE)"
         :title="t('Archive')"
-        @click="(!ds.getCount()) || app.modal.open(ModalArchive, {items: ds.getSelected()})"
+        @click="
+          !ds.getCount() ||
+            app.modal.open(ModalArchive, { items: ds.getSelected() })
+        "
       >
-        <ArchiveSVG :class="(ds.getCount()) ? 'vf-toolbar-icon' : 'vf-toolbar-icon-disabled'" />
+        <ArchiveSVG
+          :class="
+            ds.getCount() ? 'vf-toolbar-icon' : 'vf-toolbar-icon-disabled'
+          "
+        />
       </div>
     </div>
 
     <div class="vuefinder__toolbar__search-results" v-else>
       <div class="pl-2">
-        {{ t('Search results for') }}
-        <span class="dark:bg-gray-700 bg-gray-200 text-xs px-2 py-1 rounded">{{ searchQuery }}</span>
+        {{ t("Search results for") }}
+        <span class="dark:bg-gray-700 bg-gray-200 text-xs px-2 py-1 rounded">{{
+          searchQuery
+        }}</span>
       </div>
-      <LoadingSVG v-if="app.loadingIndicator === 'circular' && app.fs.loading" />
+      <LoadingSVG
+        v-if="app.loadingIndicator === 'circular' && app.fs.loading"
+      />
     </div>
 
     <div class="vuefinder__toolbar__controls">
@@ -89,16 +125,26 @@
         :title="t('Change View')"
         @click="searchQuery.length || toggleView()"
       >
-        <GridViewSVG v-if="app.view === 'grid'" class="vf-toolbar-icon" :class="(!searchQuery.length) ? '' : 'vf-toolbar-icon-disabled'" />
-        <ListViewSVG v-if="app.view === 'list'" class="vf-toolbar-icon" :class="(!searchQuery.length) ? '' : 'vf-toolbar-icon-disabled'" />
+        <GridViewSVG
+          v-if="app.view === 'grid'"
+          class="vf-toolbar-icon"
+          :class="!searchQuery.length ? '' : 'vf-toolbar-icon-disabled'"
+        />
+        <ListViewSVG
+          v-if="app.view === 'list'"
+          class="vf-toolbar-icon"
+          :class="!searchQuery.length ? '' : 'vf-toolbar-icon-disabled'"
+        />
       </div>
+
+      <button class="logout-btn" @click="logout" title="Logout">Logout</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import {inject, ref, watch} from 'vue';
-import {FEATURES} from "../features.js";
+import { inject, ref, watch } from "vue";
+import { FEATURES } from "../features.js";
 import ModalNewFolder from "./modals/ModalNewFolder.vue";
 import ModalNewFile from "./modals/ModalNewFile.vue";
 import ModalRename from "./modals/ModalRename.vue";
@@ -119,39 +165,62 @@ import MinimizeSVG from "./icons/minimize.svg";
 import GridViewSVG from "./icons/grid_view.svg";
 import ListViewSVG from "./icons/list_view.svg";
 
-const app = inject('ServiceContainer');
-const {setStore} = app.storage;
-const {t} = app.i18n;
+const app = inject("ServiceContainer");
+const { setStore } = app.storage;
+const { t } = app.i18n;
 
 const ds = app.dragSelect;
-const searchQuery = ref('');
+const searchQuery = ref("");
 
-app.emitter.on('vf-search-query', ({newQuery}) => {
+app.emitter.on("vf-search-query", ({ newQuery }) => {
   searchQuery.value = newQuery;
 });
 
 const toggleFullScreen = () => {
   app.fullScreen = !app.fullScreen;
-}
+};
 
-watch(() => app.fullScreen, () => {
-  if (app.fullScreen) {
-    // add body overflow hidden
-    document.querySelector('body').style.overflow = 'hidden';
-  } else {
-    // remove body overflow hidden
-    document.querySelector('body').style.overflow = '';
+const logout = () => {
+  localStorage.removeItem("accessCode");
+  window.location.reload();
+};
+
+watch(
+  () => app.fullScreen,
+  () => {
+    if (app.fullScreen) {
+      // add body overflow hidden
+      document.querySelector("body").style.overflow = "hidden";
+    } else {
+      // remove body overflow hidden
+      document.querySelector("body").style.overflow = "";
+    }
+    setStore("full-screen", app.fullScreen);
+    app.emitter.emit("vf-fullscreen-toggle");
   }
-  setStore('full-screen', app.fullScreen);
-  app.emitter.emit('vf-fullscreen-toggle');
-});
+);
 
 // View Management
 const toggleView = () => {
-  app.view = app.view === 'list' ? 'grid' : 'list';
+  app.view = app.view === "list" ? "grid" : "list";
 
   ds.refreshSelection();
-  setStore('viewport', app.view)
+  setStore("viewport", app.view);
 };
-
 </script>
+
+<style scoped>
+.logout-btn {
+  margin-left: 16px;
+  background: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.logout-btn:hover {
+  background: #b71c1c;
+}
+</style>
