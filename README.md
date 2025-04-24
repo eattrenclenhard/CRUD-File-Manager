@@ -12,6 +12,10 @@ A file manager built from Frankenstein monster's fusion of [Vuefinder](https://g
 ![login page](preview/login.png)
 ![file manager](preview/file_manager.png)
 
+### Directory Binding
+
+Configure directories to be bound in [config.toml](/backend/config.toml)
+
 ### REST API
 
 [Documentation](README.api.md)

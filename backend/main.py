@@ -1,6 +1,7 @@
 import logging
 import os
 import toml
+import bcrypt
 from flask import Flask, jsonify, request, Response
 from vuefinder import VuefinderApp, fill_fs
 from fs.memoryfs import MemoryFS
@@ -12,6 +13,7 @@ from dotenv import load_dotenv
 from uvicorn.middleware.wsgi import WSGIMiddleware
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
+import sqlite3
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("waitress")
@@ -355,6 +357,45 @@ def upload():
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
         return jsonify({"error": "Failed to upload file"}), 500
+
+
+# REST API endpoint to register a user
+@api.route('/api/register', methods=['POST'])
+def register():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
+    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
+    cur = conn.cursor()
+    try:
+        cur.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', (username, password_hash))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Username already exists'}), 409
+    finally:
+        conn.close()
+    return jsonify({'message': 'User registered successfully'})
+
+# REST API endpoint to login a user
+@api.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
+    conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
+    cur = conn.cursor()
+    cur.execute('SELECT password_hash FROM users WHERE username = ?', (username,))
+    row = cur.fetchone()
+    conn.close()
+    if not row or not bcrypt.checkpw(password.encode('utf-8'), row[0].encode('utf-8')):
+        return jsonify({'error': 'Invalid credentials'}), 401
+    token = generate_jwt(username)
+    return jsonify({'token': token})
 
 
 # Expose app and api instances for Uvicorn

@@ -12,6 +12,7 @@ mix-manifest.json
 _ide_helper.php
 webpack.mix.js
 package-lock.json
+/dist
 
 # idea
 .idea
