@@ -488,15 +488,24 @@ class VuefinderApp(object):
     def dispatch_request(self, request: Request):
         headers = {}
         if self.enable_cors:
-            headers.update(
-                {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Headers": "*",
-                }
-            )
+            headers.update({
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Authorization, Content-Type",
+                "Access-Control-Allow-Methods": "*",
+            })
+
+        # Handle OPTIONS request first
         if request.method == "OPTIONS":
             return Response(headers=headers)
 
+        # Check access code for non-OPTIONS requests
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or auth_header != 'Bearer frankenstein':
+            response = json_response({"error": "Unauthorized"}, status=401)
+            response.headers.extend(headers)
+            return response
+
+        # Continue with normal request handling
         endpoint = request.method + ":" + request.args.get("q")
         if endpoint not in self.endpoints:
             raise BadRequest()
@@ -511,7 +520,8 @@ class VuefinderApp(object):
             response = json_response(
                 {"message": exc.description, "status": False}, 400)
 
-        response.headers.extend(headers)
+        if isinstance(response, Response):
+            response.headers.extend(headers)
         return response
 
     def wsgi_app(self, environ, start_response):

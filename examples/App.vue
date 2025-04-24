@@ -72,25 +72,21 @@ const examples = {
 /** @type {import('../src/utils/ajax.js').RequestConfig} */
 
 const request = {
-  // ----- CHANGE ME! -----
-  // [REQUIRED] Url for development server endpoint
   baseUrl: "http://localhost:8005",
-  // ----- CHANGE ME! -----
-
-  // Additional headers & params & body
-  headers: { "X-ADDITIONAL-HEADER": "yes" },
-  params: { additionalParam1: "yes" },
-  body: { additionalBody1: ["yes"] },
-
-  // And/or transform request callback
+  headers: {
+    Authorization: "Bearer frankenstein",
+  },
   transformRequest: (req) => {
     if (req.method === "get") {
       req.params.vf = "1";
     }
+    // Ensure Authorization header is present in all requests
+    req.headers = {
+      ...req.headers,
+      Authorization: "Bearer frankenstein",
+    };
     return req;
   },
-
-  // XSRF Token header name
   xsrfHeaderName: "CSRF-TOKEN",
 };
 const maxFileSize = ref("500MB");
