@@ -12,6 +12,10 @@ A file manager built from Frankenstein monster's fusion of [Vuefinder](https://g
 ![login page](preview/login.png)
 ![file manager](preview/file_manager.png)
 
+### REST API
+
+[Documentation](README.api.md)
+
 ### Credits
 
 [@n1crack](https://github.com/n1crack)
