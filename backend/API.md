@@ -94,7 +94,7 @@ Reads the contents of a directory or file.
 Updates the content of a file.
 
 - **URL**: `/api/update`
-- **Method**: `POST`
+- **Method**: `PUT`
 - **Headers**:
   - `Content-Type`: application/json
   - `x-api-key`: API key (required)
@@ -122,7 +122,7 @@ Updates the content of a file.
 Renames a file or folder.
 
 - **URL**: `/api/rename`
-- **Method**: `POST`
+- **Method**: `PATCH`
 - **Headers**:
   - `Content-Type`: application/json
   - `x-api-key`: API key (required)
@@ -149,18 +149,12 @@ Renames a file or folder.
 Deletes a file or folder.
 
 - **URL**: `/api/delete`
-- **Method**: `POST`
+- **Method**: `DELETE`
 - **Headers**:
-  - `Content-Type`: application/json
   - `x-api-key`: API key (required)
-- **Payload**:
-
-```json
-{
-  "fs_name": "media_rw",
-  "path": "file_to_delete.txt"
-}
-```
+- **Query Parameters**:
+  - `fs_name`: Name of the file system to delete from
+  - `path`: Path of the file or folder to delete
 
 #### Response
 
@@ -235,7 +229,7 @@ curl -H "x-api-key: your-api-key" \
 4. **Update File Content**:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -H "x-api-key: your-api-key" \
+curl -X PUT -H "Content-Type: application/json" -H "x-api-key: your-api-key" \
 -d '{"fs_name": "media_rw", "path": "example.txt", "content": "New content"}' \
 http://127.0.0.1:8006/api/update
 ```
@@ -243,7 +237,7 @@ http://127.0.0.1:8006/api/update
 5. **Rename a File**:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -H "x-api-key: your-api-key" \
+curl -X PATCH -H "Content-Type: application/json" -H "x-api-key: your-api-key" \
 -d '{"fs_name": "media_rw", "old_path": "old.txt", "new_path": "new.txt"}' \
 http://127.0.0.1:8006/api/rename
 ```
@@ -251,9 +245,8 @@ http://127.0.0.1:8006/api/rename
 6. **Delete a File**:
 
 ```bash
-curl -X POST -H "Content-Type: application/json" -H "x-api-key: your-api-key" \
--d '{"fs_name": "media_rw", "path": "file_to_delete.txt"}' \
-http://127.0.0.1:8006/api/delete
+curl -X DELETE -H "x-api-key: your-api-key" \
+"http://127.0.0.1:8006/api/delete?fs_name=media_rw&path=file_to_delete.txt"
 ```
 
 ## Notes

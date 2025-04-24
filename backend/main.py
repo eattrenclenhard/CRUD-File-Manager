@@ -196,7 +196,7 @@ def read():
 # REST API endpoint to update (save content to a file)
 
 
-@api.route("/api/update", methods=["POST"])
+@api.route("/api/update", methods=["PUT"])
 def update():
     """Save content to a file."""
     try:
@@ -224,7 +224,7 @@ def update():
 # REST API endpoint to rename a file or folder
 
 
-@api.route("/api/rename", methods=["POST"])
+@api.route("/api/rename", methods=["PATCH"])
 def rename():
     """Rename a file or folder."""
     try:
@@ -261,13 +261,12 @@ def rename():
 # REST API endpoint to delete a file or folder
 
 
-@api.route("/api/delete", methods=["POST"])
+@api.route("/api/delete", methods=["DELETE"])
 def delete():
     """Delete a file or folder."""
     try:
-        payload = request.json
-        fs_name = payload.get("fs_name")
-        path = payload.get("path")
+        fs_name = request.args.get("fs_name")
+        path = request.args.get("path")
 
         logger.info(f"Delete request received: fs_name={fs_name}, path={path}")
 
