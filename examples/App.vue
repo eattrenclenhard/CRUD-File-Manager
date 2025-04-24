@@ -60,11 +60,11 @@
 
 <script setup>
 import { ref } from "vue";
-import Login from '../src/components/Login.vue';
+import Login from "../src/components/Login.vue";
 import { FEATURES, FEATURE_ALL_NAMES } from "../src/features.js";
 import { contextMenuItems, SimpleContextMenuItem } from "../src/index.js";
 
-const isAuthenticated = ref(!!localStorage.getItem('accessCode'));
+const isAuthenticated = ref(!!localStorage.getItem("accessCode"));
 
 const handleLoginSuccess = (accessCode) => {
   isAuthenticated.value = true;
@@ -82,17 +82,21 @@ const examples = {
 const request = {
   baseUrl: "http://localhost:8005",
   headers: {
-    "Authorization": `Bearer ${localStorage.getItem('accessCode') || ''}`
+    Authorization: `Bearer ${localStorage.getItem("accessCode") || ""}`,
   },
   transformRequest: (req) => {
     if (req.method === "get") {
       req.params.vf = "1";
     }
-    // Ensure Authorization header is present in all requests
+    // For both direct requests and preview URLs
     req.headers = {
       ...req.headers,
-      "Authorization": `Bearer ${localStorage.getItem('accessCode') || ''}`
+      Authorization: `Bearer ${localStorage.getItem("accessCode") || ""}`,
     };
+    // For preview URLs, add token as query parameter
+    if (req.params.q === "preview") {
+      req.params.token = localStorage.getItem("accessCode");
+    }
     return req;
   },
   xsrfHeaderName: "CSRF-TOKEN",

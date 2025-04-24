@@ -5,17 +5,17 @@
       <form @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="accessCode">Access Code</label>
-          <input 
-            type="password" 
-            id="accessCode" 
-            v-model="accessCode" 
+          <input
+            type="password"
+            id="accessCode"
+            v-model="accessCode"
             required
             placeholder="Enter access code"
-          >
+          />
         </div>
         <div v-if="error" class="error-message">{{ error }}</div>
         <button type="submit" :disabled="loading">
-          {{ loading ? 'Verifying...' : 'Access' }}
+          {{ loading ? "Verifying..." : "Access" }}
         </button>
       </form>
     </div>
@@ -24,36 +24,36 @@
 
 <script>
 export default {
-  name: 'Login',
-  emits: ['login-success'],
+  name: "Login",
+  emits: ["login-success"],
   data() {
     return {
-      accessCode: '',
+      accessCode: "",
       error: null,
-      loading: false
-    }
+      loading: false,
+    };
   },
   methods: {
     async handleLogin() {
       this.error = null;
       this.loading = true;
-      
+
       try {
         // Store access code in localStorage for subsequent requests
-        if (this.accessCode === 'frankenstein') {
-          localStorage.setItem('accessCode', this.accessCode);
-          this.$emit('login-success', this.accessCode);
+        if (this.accessCode === "frankenstein") {
+          localStorage.setItem("accessCode", this.accessCode);
+          this.$emit("login-success", this.accessCode);
         } else {
-          this.error = 'Invalid access code';
+          this.error = "Invalid access code";
         }
       } catch (err) {
-        this.error = 'Failed to verify access code';
+        this.error = "Failed to verify access code";
       } finally {
         this.loading = false;
       }
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -95,7 +95,7 @@ input {
 button {
   width: 100%;
   padding: 0.75rem;
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 4px;

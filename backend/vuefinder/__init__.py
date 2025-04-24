@@ -498,15 +498,24 @@ class VuefinderApp(object):
         if request.method == "OPTIONS":
             return Response(headers=headers)
 
-        # Check access code for non-OPTIONS requests
+        # For preview requests, check token in query params
+        if request.args.get("q") == "preview":
+            token = request.args.get("token")
+            if token == "frankenstein":
+                return self._preview(request)
+            response = json_response({"error": "Unauthorized"}, status=401)
+            response.headers.extend(headers)
+            return response
+
+        # For all other requests, check Authorization header
         auth_header = request.headers.get('Authorization')
         if not auth_header or auth_header != 'Bearer frankenstein':
             response = json_response({"error": "Unauthorized"}, status=401)
             response.headers.extend(headers)
             return response
 
-        # Continue with normal request handling
-        endpoint = request.method + ":" + request.args.get("q")
+        # Extract endpoint from query parameter
+        endpoint = request.method + ":" + request.args.get("q", "")
         if endpoint not in self.endpoints:
             raise BadRequest()
 
