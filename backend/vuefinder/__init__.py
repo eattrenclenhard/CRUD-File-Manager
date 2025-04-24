@@ -424,6 +424,67 @@ class VuefinderApp(object):
             logger.error(f"Error deleting item: {e}")
             return {"error": f"Failed to delete item: {str(e)}"}
 
+    def download_file(self, fs_name: str, path: str) -> dict:
+        """Download a file programmatically."""
+        try:
+            # Get the file system adapter
+            fs = self._adapters.get(fs_name)
+            if not fs:
+                raise ValueError(f"File system '{fs_name}' not found")
+
+            if not fs.exists(path):
+                raise ValueError(f"Path '{path}' does not exist")
+
+            # Get file info
+            info = fs.getinfo(path, ["basic", "details"])
+
+            # Read file content
+            with fs.open(path, 'rb') as f:
+                content = f.read()
+
+            # Return success response with file details and content
+            return {
+                "name": info.name,
+                "size": info.size,
+                "content": content,
+                "mime_type": mimetypes.guess_type(info.name)[0] or "application/octet-stream"
+            }
+        except Exception as e:
+            logger.error(f"Error downloading file: {e}")
+            return {"error": f"Failed to download file: {str(e)}"}
+
+    def upload_file(self, fs_name: str, path: str, file_name: str, content: bytes) -> dict:
+        """Upload a file programmatically."""
+        try:
+            # Get the file system adapter
+            fs = self._adapters.get(fs_name)
+            if not fs:
+                raise ValueError(f"File system '{fs_name}' not found")
+
+            # Clean the filename using platform-agnostic path handling
+            clean_filename = fspath.basename(file_name)
+
+            # Sanitize the filename
+            if not is_valid_filename(clean_filename, platform="universal"):
+                raise ValueError(f"Invalid filename: {clean_filename}")
+
+            # Construct full path
+            full_path = fspath.join(path, clean_filename)
+
+            # Write file content
+            with fs.open(full_path, 'wb') as f:
+                f.write(content)
+
+            # Return success response
+            return {
+                "message": "File uploaded successfully",
+                "path": full_path,
+                "name": clean_filename
+            }
+        except Exception as e:
+            logger.error(f"Error uploading file: {e}")
+            return {"error": f"Failed to upload file: {str(e)}"}
+
     def dispatch_request(self, request: Request):
         headers = {}
         if self.enable_cors:

@@ -1,7 +1,7 @@
 import logging
 import os
 import toml
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from vuefinder import VuefinderApp, fill_fs
 from fs.memoryfs import MemoryFS
 from fs.wrap import WrapReadOnly
@@ -284,6 +284,78 @@ def delete():
     except Exception as e:
         logger.error(f"Error deleting file or folder: {e}")
         return jsonify({"error": "Failed to delete file or folder"}), 500
+
+# REST API endpoint to download a file
+
+
+@api.route("/api/download", methods=["GET"])
+def download():
+    """Download a file."""
+    try:
+        fs_name = request.args.get("fs_name")
+        path = request.args.get("path")
+
+        logger.info(
+            f"Download request received: fs_name={fs_name}, path={path}")
+
+        if not fs_name or not path:
+            return jsonify({"error": "fs_name and path are required"}), 400
+
+        result = app.download_file(fs_name=fs_name, path=path)
+
+        if "error" in result:
+            return jsonify(result), 500
+
+        # Return file content as attachment
+        return Response(
+            result["content"],
+            mimetype=result["mime_type"],
+            headers={
+                "Content-Disposition": f'attachment; filename="{result["name"]}"',
+                "Content-Length": result["size"]
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error downloading file: {e}")
+        return jsonify({"error": "Failed to download file"}), 500
+
+# REST API endpoint to upload a file
+
+
+@api.route("/api/upload", methods=["POST"])
+def upload():
+    """Upload a file."""
+    try:
+        fs_name = request.form.get("fs_name")
+        path = request.form.get("path", "/")
+
+        if not fs_name:
+            return jsonify({"error": "fs_name is required"}), 400
+
+        if "file" not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        file = request.files["file"]
+        if file.filename == "":
+            return jsonify({"error": "No file selected"}), 400
+
+        content = file.read()
+        result = app.upload_file(
+            fs_name=fs_name,
+            path=path,
+            file_name=file.filename,
+            content=content
+        )
+
+        if "error" in result:
+            return jsonify(result), 500
+
+        return jsonify(result), 201
+
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        return jsonify({"error": "Failed to upload file"}), 500
 
 
 # Expose app and api instances for Uvicorn
