@@ -54,38 +54,63 @@ def load_config(config_path="config.toml"):
 
 
 class AuthMiddleware:
-    def __init__(self, app, access_code="frankenstein"):
+    def __init__(self, app):
         self.app = app
-        # Access code can be configured when creating middleware
-        self.access_code = access_code
+        # Load the hashed access code from database
+        self.access_code_hash = self._load_access_code_hash()
+
+    def _load_access_code_hash(self) -> str:
+        """Load the hashed access code from the database"""
+        conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
+        try:
+            cur = conn.cursor()
+            cur.execute('SELECT access_code FROM access LIMIT 1')
+            row = cur.fetchone()
+            if row:
+                return row[0]
+            logger.error("No access code found in database")
+            return None
+        except Exception as e:
+            logger.error(f"Error loading access code from database: {e}")
+            return None
+        finally:
+            conn.close()
 
     def verify_access(self, request: Request) -> bool:
+        """Verify access using bcrypt to check against stored hash"""
         # Handle OPTIONS request
         if request.method == "OPTIONS":
             return True
 
+        if not self.access_code_hash:
+            logger.error("No access code hash available")
+            return False
+
         # Handle preview requests (check token in query params)
         if request.args.get("q") == "preview":
             token = request.args.get("token")
-            return token == self.access_code
+            if token and bcrypt.checkpw(token.encode('utf-8'), self.access_code_hash.encode('utf-8')):
+                return True
 
         # Handle all other requests (check Authorization header)
         auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header == f'Bearer {self.access_code}':
-            return True
-
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+            if bcrypt.checkpw(token.encode('utf-8'), self.access_code_hash.encode('utf-8')):
+                return True
+            
         return False
 
     def __call__(self, environ, start_response):
         request = Request(environ)
         is_authenticated = self.verify_access(request)
-
+        
         # Enable/disable VuefinderApp based on authentication
         if is_authenticated:
             self.app.enable()
         else:
             self.app.disable()
-
+        
         return self.app(environ, start_response)
 
 
@@ -395,52 +420,8 @@ def upload():
         return jsonify({"error": "Failed to upload file"}), 500
 
 
-# REST API endpoint to register a user
-@api.route('/api/register', methods=['POST'])
-def register():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-    if not username or not password:
-        return jsonify({'error': 'Username and password required'}), 400
-    password_hash = bcrypt.hashpw(password.encode(
-        'utf-8'), bcrypt.gensalt()).decode('utf-8')
-    conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
-    cur = conn.cursor()
-    try:
-        cur.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)',
-                    (username, password_hash))
-        conn.commit()
-    except sqlite3.IntegrityError:
-        return jsonify({'error': 'Username already exists'}), 409
-    finally:
-        conn.close()
-    return jsonify({'message': 'User registered successfully'})
-
-# REST API endpoint to login a user
-
-
-@api.route('/api/login', methods=['POST'])
-def login():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-    if not username or not password:
-        return jsonify({'error': 'Username and password required'}), 400
-    conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
-    cur = conn.cursor()
-    cur.execute(
-        'SELECT password_hash FROM users WHERE username = ?', (username,))
-    row = cur.fetchone()
-    conn.close()
-    if not row or not bcrypt.checkpw(password.encode('utf-8'), row[0].encode('utf-8')):
-        return jsonify({'error': 'Invalid credentials'}), 401
-    token = generate_jwt(username)
-    return jsonify({'token': token})
-
-
 # Expose app and api instances for Uvicorn
-wsgi_app = AuthMiddleware(app, access_code="frankenstein")
+wsgi_app = AuthMiddleware(app)
 app_instance = WSGIMiddleware(wsgi_app)  # Wrap for Uvicorn compatibility
 api_instance = WSGIMiddleware(api)
 
