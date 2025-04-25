@@ -86,6 +86,15 @@ class VuefinderApp(object):
         self._default: Adapter | None = None
         self._adapters: dict[str, FS] = OrderedDict()
         self.enable_cors = enable_cors
+        self.enabled = False  # Start disabled by default
+
+    def enable(self):
+        """Enable access to file operations"""
+        self.enabled = True
+
+    def disable(self):
+        """Disable access to file operations"""
+        self.enabled = False
 
     def add_fs(self, key: str, fs: FS):
         self._adapters[key] = fs
@@ -498,18 +507,8 @@ class VuefinderApp(object):
         if request.method == "OPTIONS":
             return Response(headers=headers)
 
-        # For preview requests, check token in query params
-        if request.args.get("q") == "preview":
-            token = request.args.get("token")
-            if token == "frankenstein":
-                return self._preview(request)
-            response = json_response({"error": "Unauthorized"}, status=401)
-            response.headers.extend(headers)
-            return response
-
-        # For all other requests, check Authorization header
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or auth_header != 'Bearer frankenstein':
+        # Check if app is enabled
+        if not self.enabled:
             response = json_response({"error": "Unauthorized"}, status=401)
             response.headers.extend(headers)
             return response

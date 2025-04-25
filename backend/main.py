@@ -53,6 +53,42 @@ def load_config(config_path="config.toml"):
         return []
 
 
+class AuthMiddleware:
+    def __init__(self, app, access_code="frankenstein"):
+        self.app = app
+        # Access code can be configured when creating middleware
+        self.access_code = access_code
+
+    def verify_access(self, request: Request) -> bool:
+        # Handle OPTIONS request
+        if request.method == "OPTIONS":
+            return True
+
+        # Handle preview requests (check token in query params)
+        if request.args.get("q") == "preview":
+            token = request.args.get("token")
+            return token == self.access_code
+
+        # Handle all other requests (check Authorization header)
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header == f'Bearer {self.access_code}':
+            return True
+
+        return False
+
+    def __call__(self, environ, start_response):
+        request = Request(environ)
+        is_authenticated = self.verify_access(request)
+
+        # Enable/disable VuefinderApp based on authentication
+        if is_authenticated:
+            self.app.enable()
+        else:
+            self.app.disable()
+
+        return self.app(environ, start_response)
+
+
 # Initialize VuefinderApp
 virtual = MemoryFS()
 fill_fs(
@@ -367,11 +403,13 @@ def register():
     password = data.get('password')
     if not username or not password:
         return jsonify({'error': 'Username and password required'}), 400
-    password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    password_hash = bcrypt.hashpw(password.encode(
+        'utf-8'), bcrypt.gensalt()).decode('utf-8')
     conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
     cur = conn.cursor()
     try:
-        cur.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)', (username, password_hash))
+        cur.execute('INSERT INTO users (username, password_hash) VALUES (?, ?)',
+                    (username, password_hash))
         conn.commit()
     except sqlite3.IntegrityError:
         return jsonify({'error': 'Username already exists'}), 409
@@ -380,6 +418,8 @@ def register():
     return jsonify({'message': 'User registered successfully'})
 
 # REST API endpoint to login a user
+
+
 @api.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -389,7 +429,8 @@ def login():
         return jsonify({'error': 'Username and password required'}), 400
     conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
     cur = conn.cursor()
-    cur.execute('SELECT password_hash FROM users WHERE username = ?', (username,))
+    cur.execute(
+        'SELECT password_hash FROM users WHERE username = ?', (username,))
     row = cur.fetchone()
     conn.close()
     if not row or not bcrypt.checkpw(password.encode('utf-8'), row[0].encode('utf-8')):
@@ -399,7 +440,8 @@ def login():
 
 
 # Expose app and api instances for Uvicorn
-app_instance = WSGIMiddleware(app)
+wsgi_app = AuthMiddleware(app, access_code="frankenstein")
+app_instance = WSGIMiddleware(wsgi_app)  # Wrap for Uvicorn compatibility
 api_instance = WSGIMiddleware(api)
 
 if __name__ == "__main__":
@@ -407,4 +449,4 @@ if __name__ == "__main__":
     logger.info("Starting Waitress server on http://127.0.0.1:8006")
     serve(api_instance, host="127.0.0.1", port=8006)
     logger.info("Starting Flask API server on http://127.0.0.1:8005")
-    serve(app_instance, host="127.0.0.1", port=8005)
+    serve(wsgi_app, host="127.0.0.1", port=8005)
