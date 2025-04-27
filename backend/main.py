@@ -2,7 +2,8 @@ import logging
 import os
 import toml
 import bcrypt
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request, Response, make_response
+from flask_cors import CORS
 from vuefinder import VuefinderApp, fill_fs
 from fs.memoryfs import MemoryFS
 from fs.wrap import WrapReadOnly
@@ -28,12 +29,26 @@ if not API_KEY:
 
 # Initialize Flask app for REST API
 api = Flask(__name__)
+CORS(api, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "x-api-key"],
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"],
+        "allow_credentials": True
+    }
+})
 
 # Middleware to enforce API key requirement
 
 
 @api.before_request
 def require_api_key():
+    # Skip API key check for OPTIONS requests and login endpoint
+    if request.method == "OPTIONS" or request.path == "/api/login":
+        return None
+
     api_key = request.headers.get("x-api-key")
     if api_key != API_KEY:
         return jsonify({"error": "Unauthorized: Invalid API Key"}), 401
@@ -61,7 +76,8 @@ class AuthMiddleware:
 
     def _load_access_code_hash(self) -> str:
         """Load the hashed access code from the database"""
-        conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
+        conn = sqlite3.connect(os.path.join(
+            os.path.dirname(__file__), 'users.db'))
         try:
             cur = conn.cursor()
             cur.execute('SELECT access_code FROM access LIMIT 1')
@@ -98,19 +114,19 @@ class AuthMiddleware:
             token = auth_header.split(' ')[1]
             if bcrypt.checkpw(token.encode('utf-8'), self.access_code_hash.encode('utf-8')):
                 return True
-            
+
         return False
 
     def __call__(self, environ, start_response):
         request = Request(environ)
         is_authenticated = self.verify_access(request)
-        
+
         # Enable/disable VuefinderApp based on authentication
         if is_authenticated:
             self.app.enable()
         else:
             self.app.disable()
-        
+
         return self.app(environ, start_response)
 
 
@@ -418,6 +434,56 @@ def upload():
     except Exception as e:
         logger.error(f"Error uploading file: {e}")
         return jsonify({"error": "Failed to upload file"}), 500
+
+# REST API endpoint to handle login requests
+
+
+@api.route("/api/login", methods=["POST", "OPTIONS"])
+def login():
+    """Handle login requests"""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        # Create response with proper CORS headers
+        response = make_response()
+        # We don't need to add CORS headers manually since Flask-CORS will handle it
+        return response, 200
+
+    try:
+        payload = request.json
+        access_code = payload.get("accessCode")
+
+        if not access_code:
+            return jsonify({"error": "Access code is required"}), 400
+
+        # Get the stored hash from the database
+        conn = sqlite3.connect(os.path.join(
+            os.path.dirname(__file__), 'users.db'))
+        try:
+            cur = conn.cursor()
+            cur.execute('SELECT access_code FROM access LIMIT 1')
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "Authentication failed"}), 401
+
+            stored_hash = row[0]
+
+            # Verify the access code
+            if bcrypt.checkpw(access_code.encode('utf-8'), stored_hash.encode('utf-8')):
+                # Let Flask-CORS handle the CORS headers
+                return jsonify({
+                    "success": True,
+                    "message": "Login successful",
+                    "token": access_code
+                }), 200
+            else:
+                return jsonify({"error": "Invalid access code"}), 401
+
+        finally:
+            conn.close()
+
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        return jsonify({"error": f"Login failed: {str(e)}"}), 500
 
 
 # Expose app and api instances for Uvicorn

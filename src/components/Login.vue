@@ -4,7 +4,6 @@
       <h2>Frankenstein File Manager</h2>
       <form @submit.prevent="handleLogin">
         <div class="form-group">
-          <!-- <label for="accessCode">Access Code</label> -->
           <input
             type="password"
             id="accessCode"
@@ -12,9 +11,12 @@
             required
             title="fill in access code"
             placeholder="Enter access code"
+            autocomplete="current-password"
           />
         </div>
-        <div v-if="error" class="error-message">{{ error }}</div>
+        <div v-if="error" class="error-message" role="alert">
+          <p>{{ error }}</p>
+        </div>
         <button type="submit" :disabled="loading">
           {{ loading ? "Verifying..." : "Access" }}
         </button>
@@ -40,17 +42,33 @@ export default {
       this.loading = true;
 
       try {
-        // Store access code in localStorage for subsequent requests
-        if (this.accessCode === "frankenstein") {
-          localStorage.setItem("accessCode", this.accessCode);
-          this.$emit("login-success", this.accessCode);
-        } else {
-          this.error = "Invalid access code";
+        const response = await fetch("http://localhost:8006/api/login", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "x-api-key": import.meta.env.VITE_API_KEY || ""
+          },
+          body: JSON.stringify({ accessCode: this.accessCode }),
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          // Display both status code and error message if available
+          this.error = `Error ${response.status}: ${data.error || response.statusText}`;
+          console.error('Login error:', data);
+          return;
         }
+
+        this.$emit("login-success");
       } catch (err) {
-        this.error = "Failed to verify access code";
+        console.error('Login error:', err);
+        this.error = `Connection error: ${err.message}`;
       } finally {
         this.loading = false;
+        this.accessCode = "";
       }
     },
   },
@@ -133,7 +151,19 @@ button:disabled {
 
 .error-message {
   color: #ff0033;
-  margin-bottom: 1rem;
+  margin: 1rem 0;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
   font-size: 0.9rem;
+  width: 100%;
+  max-width: 250px;
+  text-align: center;
+}
+
+.error-message p {
+  margin: 0;
+  word-break: break-word;
 }
 </style>
