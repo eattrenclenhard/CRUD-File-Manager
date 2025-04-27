@@ -61,6 +61,8 @@ export default {
           return;
         }
 
+        // Store the access code in localStorage
+        localStorage.setItem("accessCode", this.accessCode);
         this.$emit("login-success");
       } catch (err) {
         console.error('Login error:', err);
