@@ -18,12 +18,6 @@ export default (props, options) => {
   const storage = useStorage(props.id);
   const emitter = mitt();
 
-  // Check authentication
-  const accessCode = localStorage.getItem("accessCode");
-  if (!accessCode) {
-    return null;
-  }
-
   const metricUnits = storage.getStore("metricUnits", false);
   const theme = useTheme(storage, props.theme);
   const supportedLocales = options.i18n;
@@ -69,7 +63,6 @@ export default (props, options) => {
       ...props.request,
       headers: {
         ...props.request.headers,
-        Authorization: `Bearer ${accessCode}`,
       },
     }),
     // active features

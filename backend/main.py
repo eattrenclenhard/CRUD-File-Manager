@@ -15,6 +15,8 @@ from uvicorn.middleware.wsgi import WSGIMiddleware
 from werkzeug.wrappers import Request
 from werkzeug.test import EnvironBuilder
 import sqlite3
+import jwt
+import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("waitress")
@@ -71,13 +73,11 @@ def load_config(config_path="config.toml"):
 class AuthMiddleware:
     def __init__(self, app):
         self.app = app
-        # Load the hashed access code from database
         self.access_code_hash = self._load_access_code_hash()
 
     def _load_access_code_hash(self) -> str:
         """Load the hashed access code from the database"""
-        conn = sqlite3.connect(os.path.join(
-            os.path.dirname(__file__), 'users.db'))
+        conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
         try:
             cur = conn.cursor()
             cur.execute('SELECT access_code FROM access LIMIT 1')
@@ -93,14 +93,9 @@ class AuthMiddleware:
             conn.close()
 
     def verify_access(self, request: Request) -> bool:
-        """Verify access using bcrypt to check against stored hash"""
-        # Handle OPTIONS request
+        """Verify access using session token"""
         if request.method == "OPTIONS":
             return True
-
-        if not self.access_code_hash:
-            logger.error("No access code hash available")
-            return False
 
         # Handle preview requests (check token in query params)
         if request.args.get("q") == "preview":
@@ -108,14 +103,20 @@ class AuthMiddleware:
             if token and bcrypt.checkpw(token.encode('utf-8'), self.access_code_hash.encode('utf-8')):
                 return True
 
-        # Handle all other requests (check Authorization header)
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            token = auth_header.split(' ')[1]
-            if bcrypt.checkpw(token.encode('utf-8'), self.access_code_hash.encode('utf-8')):
-                return True
+        # Get session token from cookie
+        token = request.cookies.get('session_token')
+        if not token:
+            logger.debug("No session token found in request")
+            return False
 
-        return False
+        try:
+            # Verify the JWT token
+            jwt.decode(token, os.getenv('SECRET_KEY', 'your-secret-key'), algorithms=["HS256"])
+            logger.debug("Session token validated successfully")
+            return True
+        except jwt.InvalidTokenError:
+            logger.warning("Invalid session token")
+            return False
 
     def __call__(self, environ, start_response):
         request = Request(environ)
@@ -441,11 +442,8 @@ def upload():
 @api.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
     """Handle login requests"""
-    # Handle preflight OPTIONS request
     if request.method == "OPTIONS":
-        # Create response with proper CORS headers
         response = make_response()
-        # We don't need to add CORS headers manually since Flask-CORS will handle it
         return response, 200
 
     try:
@@ -456,8 +454,7 @@ def login():
             return jsonify({"error": "Access code is required"}), 400
 
         # Get the stored hash from the database
-        conn = sqlite3.connect(os.path.join(
-            os.path.dirname(__file__), 'users.db'))
+        conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
         try:
             cur = conn.cursor()
             cur.execute('SELECT access_code FROM access LIMIT 1')
@@ -469,12 +466,32 @@ def login():
 
             # Verify the access code
             if bcrypt.checkpw(access_code.encode('utf-8'), stored_hash.encode('utf-8')):
-                # Let Flask-CORS handle the CORS headers
-                return jsonify({
+                # Create a session token
+                session_token = jwt.encode(
+                    {
+                        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7),
+                        'iat': datetime.datetime.utcnow(),
+                    },
+                    os.getenv('SECRET_KEY', 'your-secret-key'),
+                    algorithm='HS256'
+                )
+
+                response = jsonify({
                     "success": True,
-                    "message": "Login successful",
-                    "token": access_code
-                }), 200
+                    "message": "Login successful"
+                })
+                
+                # Set secure cookie with session token
+                response.set_cookie(
+                    'session_token',
+                    session_token,
+                    httponly=True,
+                    secure=True,
+                    samesite='Strict',
+                    max_age=7 * 24 * 60 * 60  # 7 days
+                )
+                
+                return response, 200
             else:
                 return jsonify({"error": "Invalid access code"}), 401
 

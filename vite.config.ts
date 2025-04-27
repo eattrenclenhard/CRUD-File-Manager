@@ -23,17 +23,6 @@ export default defineConfig({
             },
         },
     },
-    server: {
-        proxy: {
-            '/api': {
-                target: 'http://localhost:8006',
-                changeOrigin: true,
-                secure: false,
-                ws: true,
-                credentials: 'include'
-            }
-        }
-    },
     build: {
         lib: {
             entry: resolve(__dirname, 'src/index.js'),

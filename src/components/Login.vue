@@ -47,8 +47,7 @@ export default {
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            "Accept": "application/json",
-            "x-api-key": import.meta.env.VITE_API_KEY || ""
+            "Accept": "application/json"
           },
           body: JSON.stringify({ accessCode: this.accessCode }),
         });

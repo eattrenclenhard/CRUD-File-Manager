@@ -81,18 +81,10 @@ const examples = {
 
 const request = {
   baseUrl: "http://localhost:8005",
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("accessCode") || ""}`,
-  },
   transformRequest: (req) => {
     if (req.method === "get") {
       req.params.vf = "1";
     }
-    // For both direct requests and preview URLs
-    req.headers = {
-      ...req.headers,
-      Authorization: `Bearer ${localStorage.getItem("accessCode") || ""}`,
-    };
     // For preview URLs, add token as query parameter
     if (req.params.q === "preview") {
       req.params.token = localStorage.getItem("accessCode");
@@ -100,6 +92,10 @@ const request = {
     return req;
   },
   xsrfHeaderName: "CSRF-TOKEN",
+  // Ensure credentials (cookies) are sent with requests
+  fetchParams: {
+    credentials: 'include'
+  }
 };
 const maxFileSize = ref("500MB");
 

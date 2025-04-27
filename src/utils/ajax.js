@@ -224,6 +224,7 @@ export class Requester {
       method: input.method,
       headers: reqParams.headers,
       signal: input.abortSignal,
+      credentials: 'include' // Always include credentials for session cookies
     };
     const url = reqParams.url + "?" + new URLSearchParams(reqParams.params);
     if (reqParams.method !== "get" && reqParams.body != null) {
@@ -246,10 +247,8 @@ export class Requester {
 
     const response = await this.customFetch(url, init);
 
-    // Handle unauthorized responses
+    // Handle unauthorized responses by redirecting to login
     if (response.status === 401) {
-      // Clear access code and reload page to show login
-      localStorage.removeItem("accessCode");
       window.location.reload();
       throw new Error("Unauthorized");
     }
