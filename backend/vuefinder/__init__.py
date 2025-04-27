@@ -86,6 +86,7 @@ class VuefinderApp(object):
         self._default: Adapter | None = None
         self._adapters: dict[str, FS] = OrderedDict()
         self.enable_cors = enable_cors
+        self.cors_origin = "http://localhost:5173"
         self.enabled = False  # Start disabled by default
 
     def enable(self):
@@ -497,15 +498,18 @@ class VuefinderApp(object):
     def dispatch_request(self, request: Request):
         headers = {}
         if self.enable_cors:
+            # Allow credentials and specify exact origin
             headers.update({
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Authorization, Content-Type",
-                "Access-Control-Allow-Methods": "*",
+                'Access-Control-Allow-Origin': self.cors_origin,
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
+                'Access-Control-Allow-Credentials': 'true',
+                'Access-Control-Expose-Headers': 'Content-Type, Authorization'
             })
-
-        # Handle OPTIONS request first
-        if request.method == "OPTIONS":
-            return Response(headers=headers)
+            
+            # Handle preflight OPTIONS request
+            if request.method == 'OPTIONS':
+                return Response('', 204, headers)
 
         # Check if app is enabled
         if not self.enabled:

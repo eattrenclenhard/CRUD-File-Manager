@@ -32,9 +32,9 @@ if not API_KEY:
 # Initialize Flask app for REST API
 api = Flask(__name__)
 CORS(api, resources={
-    r"/api/*": {
+    r"/*": {
         "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         "allow_headers": ["Content-Type", "Authorization", "x-api-key"],
         "supports_credentials": True,
         "expose_headers": ["Content-Type", "Authorization"],
