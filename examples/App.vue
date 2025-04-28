@@ -80,7 +80,7 @@ const examples = {
 /** @type {import('../src/utils/ajax.js').RequestConfig} */
 
 const request = {
-  baseUrl: "http://localhost:8005",
+  baseUrl: import.meta.env.VITE_APP_URL || "http://localhost:8005",
   transformRequest: (req) => {
     if (req.method === "get") {
       req.params.vf = "1";
@@ -94,8 +94,8 @@ const request = {
   xsrfHeaderName: "CSRF-TOKEN",
   // Ensure credentials (cookies) are sent with requests
   fetchParams: {
-    credentials: 'include'
-  }
+    credentials: "include",
+  },
 };
 const maxFileSize = ref("500MB");
 

@@ -34,6 +34,7 @@ export default {
       accessCode: "",
       error: null,
       loading: false,
+      baseUrl: import.meta.env.VITE_API_URL || "http://localhost:8006",
     };
   },
   methods: {
@@ -42,22 +43,24 @@ export default {
       this.loading = true;
 
       try {
-        const response = await fetch("http://localhost:8006/api/login", {
+        const response = await fetch(`${this.baseUrl}/api/login`, {
           method: "POST",
           credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            "Accept": "application/json"
+            Accept: "application/json",
           },
           body: JSON.stringify({ accessCode: this.accessCode }),
         });
 
         const data = await response.json();
-        
+
         if (!response.ok) {
           // Display both status code and error message if available
-          this.error = `Error ${response.status}: ${data.error || response.statusText}`;
-          console.error('Login error:', data);
+          this.error = `Error ${response.status}: ${
+            data.error || response.statusText
+          }`;
+          console.error("Login error:", data);
           return;
         }
 
@@ -65,7 +68,7 @@ export default {
         localStorage.setItem("accessCode", this.accessCode);
         this.$emit("login-success");
       } catch (err) {
-        console.error('Login error:', err);
+        console.error("Login error:", err);
         this.error = `Connection error: ${err.message}`;
       } finally {
         this.loading = false;
