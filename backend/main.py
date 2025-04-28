@@ -23,17 +23,21 @@ logger = logging.getLogger("waitress")
 
 # Load environment variables
 load_dotenv()
+SECRET_KEY = os.getenv('SECRET_KEY', 'somethingfrank')
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:
     logger.error(
         "API_KEY is not set in the environment. API requests will fail without a valid key."
     )
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+logger.info(type(ALLOWED_ORIGINS))
 
 # Initialize Flask app for REST API
 api = Flask(__name__)
 CORS(api, resources={
     r"/*": {
-        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+        "origins": ALLOWED_ORIGINS,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         "allow_headers": ["Content-Type", "Authorization", "x-api-key"],
         "supports_credentials": True,
@@ -77,7 +81,8 @@ class AuthMiddleware:
 
     def _load_access_code_hash(self) -> str:
         """Load the hashed access code from the database"""
-        conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
+        conn = sqlite3.connect(os.path.join(
+            os.path.dirname(__file__), 'users.db'))
         try:
             cur = conn.cursor()
             cur.execute('SELECT access_code FROM access LIMIT 1')
@@ -111,7 +116,7 @@ class AuthMiddleware:
 
         try:
             # Verify the JWT token
-            jwt.decode(token, os.getenv('SECRET_KEY', 'your-secret-key'), algorithms=["HS256"])
+            jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
             logger.debug("Session token validated successfully")
             return True
         except jwt.InvalidTokenError:
@@ -454,7 +459,8 @@ def login():
             return jsonify({"error": "Access code is required"}), 400
 
         # Get the stored hash from the database
-        conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), 'users.db'))
+        conn = sqlite3.connect(os.path.join(
+            os.path.dirname(__file__), 'users.db'))
         try:
             cur = conn.cursor()
             cur.execute('SELECT access_code FROM access LIMIT 1')
@@ -472,7 +478,7 @@ def login():
                         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7),
                         'iat': datetime.datetime.utcnow(),
                     },
-                    os.getenv('SECRET_KEY', 'your-secret-key'),
+                    SECRET_KEY,
                     algorithm='HS256'
                 )
 
@@ -480,7 +486,7 @@ def login():
                     "success": True,
                     "message": "Login successful"
                 })
-                
+
                 # Set secure cookie with session token
                 response.set_cookie(
                     'session_token',
@@ -490,7 +496,7 @@ def login():
                     samesite='Strict',
                     max_age=7 * 24 * 60 * 60  # 7 days
                 )
-                
+
                 return response, 200
             else:
                 return jsonify({"error": "Invalid access code"}), 401
